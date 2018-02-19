@@ -1,45 +1,63 @@
-package main
+package app
 
 import (
 	"fmt"
-	"os"
 )
 
 // App represents a self-contained instance of this app
 type App struct {
 	*Context
+	vaults []*VaultBuilder
 }
 
 // NewApp instantiates a new app from a context
-func NewApp(ctx *Context) *App {
+func NewApp(ctx *Context, vaults ...*VaultBuilder) *App {
 	return &App{
 		Context: ctx,
+		vaults:  vaults,
 	}
 }
 
-// RunWithVaults run the app with preconfigured vault(s)
-func (ctx *App) RunWithVaults(vaults ...*VaultBuilder) {
+// Commands returns the list of all the commands this sops-vault instance is abvle to handles/wraps
+func (a *App) Commands() []string {
+	cmds := map[string]bool{}
+	for _, cfg := range a.vaultConfigs() {
+		for _, cmd := range cfg.commands {
+			cmds[cmd] = true
+		}
+	}
+
+	ret := []string{}
+	for cmd := range cmds {
+		ret = append(ret, cmd)
+	}
+	return ret
+}
+
+// vaultConfigs prepares preconfigured vault config(s)
+func (a *App) vaultConfigs() []*VaultConfig {
 	cfgs := []*VaultConfig{}
-	for _, v := range vaults {
+	for _, v := range a.vaults {
 		cfgs = append(cfgs, v.VaultConfig)
 	}
-	ctx.run(cfgs...)
+	return cfgs
 }
 
-// run executes the command provided via the command-line args, with temporarily decrypting necessary files according to the appropriate config
-func (ctx *App) run(cfgs ...*VaultConfig) {
+// Run executes the command provided via the command-line args, with temporarily decrypting necessary files according to the appropriate config
+func (a *App) Run(cmd string, args ...string) {
 	var cfg *VaultConfig
-	cmd, args := os.Args[1], os.Args[2:]
-	for _, c := range cfgs {
+	for _, c := range a.vaultConfigs() {
 		if c.MatchesCommand(cmd, args...) {
 			cfg = c
 			break
 		}
 	}
 	if cfg == nil {
-		panic(fmt.Errorf("no config found for command: %s", cmd))
+		a.Context.ExitWithError(fmt.Errorf("no config found for command: %s", cmd))
 	}
-	ctx.info.Printf("using vault: %s\n", cfg.vaultName)
-	job := &Job{cfg}
-	job.RunOrPanic(ctx.Context, cmd, args...)
+	a.info.Printf("using vault: %s\n", cfg.vaultName)
+	job := &Job{VaultConfig: cfg, context: a.Context}
+	if err := job.RunOrPanic(cmd, args...); err != nil {
+		a.Context.ExitWithError(err)
+	}
 }

@@ -1,16 +1,15 @@
-package main
+package app
 
 import (
 	"bufio"
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 )
 
-func runInBackground(command string, args ...string) error {
+func runInBackground(ctx *Context, command string, args ...string) error {
 	cmd := exec.Command(command, args...)
 
 	stdout, err := cmd.StdoutPipe()
@@ -23,7 +22,7 @@ func runInBackground(command string, args ...string) error {
 	go func(reader io.Reader) {
 		scanner := bufio.NewScanner(stdoutReader)
 		for scanner.Scan() {
-			log.Printf("read stdout: %s", scanner.Text())
+			ctx.Debug(fmt.Sprintf("read stdout: %s", scanner.Text()))
 			stdoutBuffer.WriteString(scanner.Text())
 		}
 	}(stdoutReader)
@@ -38,7 +37,7 @@ func runInBackground(command string, args ...string) error {
 	go func(reader io.Reader) {
 		scanner := bufio.NewScanner(stderrReader)
 		for scanner.Scan() {
-			log.Printf("read stderr: %s", scanner.Text())
+			ctx.Debug(fmt.Sprintf("read stderr: %s", scanner.Text()))
 			stderrBuffer.WriteString(scanner.Text())
 		}
 	}(stderrReader)

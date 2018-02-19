@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"strings"
@@ -19,10 +19,13 @@ func fileExists(filename string) bool {
 
 type Job struct {
 	*VaultConfig
+	context *Context
 }
 
 // RunOrPanic runs the app with the provided configuration. On any error it panics
-func (app *Job) RunOrPanic(context *Context, command string, args ...string) {
+func (app *Job) RunOrPanic(command string, args ...string) error {
+	context := app.context
+
 	unencryptedVault := app.unencryptedVault()
 	encryptedVault := app.encryptedVault()
 	insecureFilePatterns := app.entries
@@ -32,12 +35,13 @@ func (app *Job) RunOrPanic(context *Context, command string, args ...string) {
 	encryptedVaultExists := fileExists(encryptedVault)
 	newlyRecognizedFiles := []string{}
 	if encryptedVaultExists {
+		// TODO shell-out rather than using sops as a library, so that we can easily supress logs from the library
 		jsonBytes, err := decrypt.File(encryptedVault, "json")
 		if err != nil {
-			panic(fmt.Errorf("failed to decrypt %s: %v", encryptedVault, err))
+			return fmt.Errorf("failed to decrypt %s: %v", encryptedVault, err)
 		}
 		if err := json.Unmarshal(jsonBytes, &filesInVault); err != nil {
-			panic(fmt.Errorf("failed to unmarshal %s: %v", encryptedVault, err))
+			return fmt.Errorf("failed to unmarshal %s: %v", encryptedVault, err)
 		}
 		for k := range filesInVault {
 			if k != "sops" {
@@ -48,7 +52,7 @@ func (app *Job) RunOrPanic(context *Context, command string, args ...string) {
 	for _, e := range insecureFilePatterns {
 		files, err := filepath.Glob(e.pathPattern)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		for _, f := range files {
 			fmt.Printf("found %s\n", f)
@@ -59,14 +63,13 @@ func (app *Job) RunOrPanic(context *Context, command string, args ...string) {
 				}
 			}
 			if alreadyEncrypted {
-				fmt.Printf("skipping %s: already encrypted. you can safely remove it\n", f)
+				context.Debug(fmt.Sprintf("skipping %s: already encrypted. you can safely remove it", f))
 			} else {
-				fmt.Printf("adding %s to the vault\n", f)
+				context.Debug(fmt.Sprintf("adding %s to the vault", f))
 			}
 			raw, err := ioutil.ReadFile(f)
 			if err != nil {
-				fmt.Println(err.Error())
-				os.Exit(1)
+				return err
 			}
 			filesInVault[f] = string(raw)
 			newlyRecognizedFiles = append(newlyRecognizedFiles, f)
@@ -79,46 +82,43 @@ func (app *Job) RunOrPanic(context *Context, command string, args ...string) {
 		// We don't use `sops --set key value` here so that we won't expose sensitive values in the process list
 		cleartextFilesInJSON, err := json.Marshal(filesInVault)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
-		defer cleanup(unencryptedVault)
+		defer app.cleanup(unencryptedVault)
 		err = ioutil.WriteFile(unencryptedVault, cleartextFilesInJSON, 0644)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
-		err = runInBackground("sh", "-c", fmt.Sprintf("sops --encrypt %s > %s", unencryptedVault, encryptedVault))
+		err = runInBackground(context, "sh", "-c", fmt.Sprintf("sops --encrypt %s > %s", unencryptedVault, encryptedVault))
 		if err != nil {
-			panic(err)
+			return err
 		}
 	} else {
 		patterns := []string{}
 		for _, p := range insecureFilePatterns {
 			patterns = append(patterns, fmt.Sprintf(`"%s"`, p.pathPattern))
 		}
-		context.err.Printf("you must have \"%s\" or files matching any of [%s] to run %s\n", encryptedVault, strings.Join(patterns, ", "), command)
-		os.Exit(1)
+		return fmt.Errorf("you must have \"%s\" or files matching any of [%s] to run %s", encryptedVault, strings.Join(patterns, ", "), command)
 	}
 
 	for _, path := range newlyRecognizedFiles {
-		fmt.Printf("renaming %s to %s.bak: it is already encrypted into %s. you can safely remove it\n", path, path, encryptedVault)
+		context.Info(fmt.Sprintf("renaming %s to %s.bak: it is already encrypted into %s. you can safely remove it", path, path, encryptedVault))
 		err := os.Rename(path, fmt.Sprintf("%s.bak", path))
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
 	jsonBytes, err := decrypt.File(encryptedVault, "json")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	var restoredFiles map[string]string
 	if err := json.Unmarshal(jsonBytes, &restoredFiles); err != nil {
-		panic(err)
+		return err
 	}
-
-	fmt.Println(restoredFiles)
 
 	restoredFilepathes := []string{}
 
@@ -126,28 +126,30 @@ func (app *Job) RunOrPanic(context *Context, command string, args ...string) {
 		restoredFilepathes = append(restoredFilepathes, path)
 	}
 
-	defer cleanup(restoredFilepathes...)
+	defer app.cleanup(restoredFilepathes...)
 
 	for path, content := range restoredFiles {
-		fmt.Printf("restoring %s", path)
+		context.Debug(fmt.Sprintf("restoring %s", path))
 		err := ioutil.WriteFile(path, []byte(content), 0644)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
 	err = runInForeground(command, args...)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
-func cleanup(restoredFiles ...string) {
+func (j *Job) cleanup(restoredFiles ...string) {
+	context := j.context
 	for _, path := range restoredFiles {
-		fmt.Printf("removing %s\n", path)
+		context.Debug(fmt.Sprintf("removing %s", path))
 		err := os.Remove(path)
 		if err != nil {
-			fmt.Printf("failed to remove %s: BEWARE THAT NO CLEARTEXT FILE IS REMAINING!\n", path)
+			context.Warn(fmt.Sprintf("failed to remove %s: BEWARE THAT NO CLEARTEXT FILE IS REMAINING!", path))
 		}
 	}
 }

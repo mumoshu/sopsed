@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mumoshu/sops-vault/app"
 	"github.com/spf13/cobra"
 )
 
@@ -14,12 +15,25 @@ var rootCmd = &cobra.Command{
 				  Complete documentation is available at https://github.com/mumoshu/sops-vault`,
 }
 
-func Execute() {
-	ctx := NewContext()
-	NewApp(ctx).RunWithVaults(
-		NewVault("kube-aws").UsedForCommand("kube-aws").StoresFilesMatchingGlob("credentials/*-key.pem", "credentials/tokens.csv"),
-		NewVault("kubectl").UsedForCommand("kubectl", "helm").StoresFilesMatchingGlob("kubeconfig"),
-	)
+func GenerateAndRun(app *app.App) {
+	runCmd := &cobra.Command{
+		Use:   "run wrapped-command [args...]",
+		Short: "Run wrapped-command with temporarily decrypting required files from the vault",
+		Args:  cobra.MinimumNArgs(1),
+	}
+	rootCmd.AddCommand(runCmd)
+
+	for _, cmd := range app.Commands() {
+		c := &cobra.Command{
+			Use:   fmt.Sprintf("%s [args]", cmd),
+			Short: fmt.Sprintf("Run %s with temporarily decrypting required files from the vault", cmd),
+			Args:  cobra.MinimumNArgs(0),
+			Run: func(cmd *cobra.Command, args []string) {
+				app.Run(cmd.Name(), args...)
+			},
+		}
+		runCmd.AddCommand(c)
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
