@@ -13,3 +13,7 @@ build: format
 .PHONY: it
 it: build
 	sh -c './bin/sops-vault kubectl version'
+
+.PHONY: release
+release: build
+	scripts/release

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -ev
+
+if [ -z "$GITHUB_USER" ]; then
+  echo GITHUB_USER must be set 1>&2
+  exit 1
+fi
+
+if [ -z "$GITHUB_REPO" ]; then
+  echo GITHUB_REPO must be set 1>&2
+  exit 1
+fi
+
+if [ -z "$GITHUB_TOKEN" ]; then
+  echo GITUB_TOKEN must be set 1>&2
+  exit 1
+fi
+
+go get github.com/golang/dep/cmd/dep
+go get github.com/aktau/github-release
+
+COMMIT=$(git rev-parse HEAD)
+TAG=$(git describe --exact-match --abbrev=0 --tags "${COMMIT}" 2> /dev/null || true)
+
+NAME=sops-vault
+
+github-release release -t $TAG -n $TAG -c $COMMIT
+github-release upload -f ./bin/$NAME -n $NAME -t $TAG
+echo releases at https://github.com/mumoshu/$NAME/releases/tag/$TAG
