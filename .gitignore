@@ -1,0 +1,4 @@
+.envrc
+.sops.yaml
+*.bak
+.sops.vault.*
