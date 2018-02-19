@@ -79,21 +79,36 @@ func (app *Job) RunOrPanic(command string, args ...string) error {
 	vaultSize := len(filesInVault)
 
 	if vaultSize > 0 {
-		// We don't use `sops --set key value` here so that we won't expose sensitive values in the process list
-		cleartextFilesInJSON, err := json.Marshal(filesInVault)
-		if err != nil {
-			return err
+		{
+			// We don't use `sops --set key value` here so that we won't expose sensitive values in the process list
+			cleartextFilesInJSON, err := json.Marshal(filesInVault)
+			if err != nil {
+				return err
+			}
+
+			defer app.cleanup(unencryptedVault)
+			if err := ioutil.WriteFile(unencryptedVault, cleartextFilesInJSON, 0644); err != nil {
+				return err
+			}
 		}
 
-		defer app.cleanup(unencryptedVault)
-		err = ioutil.WriteFile(unencryptedVault, cleartextFilesInJSON, 0644)
-		if err != nil {
-			return err
-		}
+		{
+			out, err := runAndCaptureStdout(context, "sh", "-c", fmt.Sprintf("sops --encrypt %s", unencryptedVault))
+			if err != nil {
+				if strings.Contains(err.Error(), "config file not found and no keys provided through command line options") {
+					app.context.Debug(err.Error())
+					return fmt.Errorf("`sops --encrypt` failed: .sops.yaml seems to be missing. please create one following the steps in readme(https://github.com/mumoshu/sops-vault)")
+				}
+				if strings.Contains(err.Error(), "Failed to call KMS encryption service: ExpiredTokenException: The security token included in the request is expired") {
+					app.context.Debug(err.Error())
+					return fmt.Errorf("`sops --encrypt` failed: aws credentials seem to be missing or expired")
+				}
+				return err
+			}
 
-		err = runInBackground(context, "sh", "-c", fmt.Sprintf("sops --encrypt %s > %s", unencryptedVault, encryptedVault))
-		if err != nil {
-			return err
+			if err := ioutil.WriteFile(encryptedVault, []byte(out), 0644); err != nil {
+				return err
+			}
 		}
 	} else {
 		patterns := []string{}
@@ -136,9 +151,9 @@ func (app *Job) RunOrPanic(command string, args ...string) error {
 		}
 	}
 
-	err = runInForeground(command, args...)
-	if err != nil {
-		return err
+	context.Debug(fmt.Sprintf("running %s %s", command, strings.Join(args, " ")))
+	if err := runInForeground(command, args...); err != nil {
+		return fmt.Errorf("run: %v", err)
 	}
 	return nil
 }

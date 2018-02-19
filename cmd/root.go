@@ -13,13 +13,14 @@ var RootCmd = &cobra.Command{
 	Short: "sops-vault is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run",
 	Long: `sops-vault is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run.
 				  Complete documentation is available at https://github.com/mumoshu/sops-vault`,
+	Args: cobra.NoArgs,
 }
 
 func Init(app *app.App) {
 	runCmd := &cobra.Command{
 		Use:   "run wrapped-command [args...]",
 		Short: "Run wrapped-command with temporarily decrypting required files from the vault",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.NoArgs,
 	}
 	RootCmd.AddCommand(runCmd)
 
@@ -27,11 +28,13 @@ func Init(app *app.App) {
 		c := &cobra.Command{
 			Use:   fmt.Sprintf("%s [args]", cmd),
 			Short: fmt.Sprintf("Run %s with temporarily decrypting required files from the vault", cmd),
-			Args:  cobra.MinimumNArgs(0),
+			Args:  cobra.ArbitraryArgs,
 			Run: func(cmd *cobra.Command, args []string) {
+				fmt.Printf("running %s\n", cmd.Name())
 				app.Run(cmd.Name(), args...)
 			},
 		}
+		c.DisableFlagParsing = true
 		runCmd.AddCommand(c)
 	}
 }

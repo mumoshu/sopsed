@@ -10,7 +10,7 @@ func CreateCommand() *cobra.Command {
 	ctx := app.NewContext()
 	ap := app.NewApp(
 		ctx,
-		app.NewVault("kube-aws").UsedForCommand("kube-aws").StoresFilesMatchingGlob("credentials/*-key.pem", "credentials/tokens.csv"),
+		app.NewVault("kube-aws").UsedForCommand("kube-aws").StoresFilesMatchingGlob("credentials/*-key.pem", "credentials/tokens.csv", "credentials/kubelet-tls-bootstrap-token"),
 		app.NewVault("kubectl").UsedForCommand("kubectl", "helm").StoresFilesMatchingGlob("kubeconfig"),
 	)
 
