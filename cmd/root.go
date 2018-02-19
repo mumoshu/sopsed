@@ -8,20 +8,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:   "sops-vault",
 	Short: "sops-vault is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run",
 	Long: `sops-vault is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run.
 				  Complete documentation is available at https://github.com/mumoshu/sops-vault`,
 }
 
-func GenerateAndRun(app *app.App) {
+func Init(app *app.App) {
 	runCmd := &cobra.Command{
 		Use:   "run wrapped-command [args...]",
 		Short: "Run wrapped-command with temporarily decrypting required files from the vault",
 		Args:  cobra.MinimumNArgs(1),
 	}
-	rootCmd.AddCommand(runCmd)
+	RootCmd.AddCommand(runCmd)
 
 	for _, cmd := range app.Commands() {
 		c := &cobra.Command{
@@ -34,8 +34,10 @@ func GenerateAndRun(app *app.App) {
 		}
 		runCmd.AddCommand(c)
 	}
+}
 
-	if err := rootCmd.Execute(); err != nil {
+func Execute() {
+	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
