@@ -4,6 +4,10 @@ A convenient wrapper for automatically encrypting/decrypting files with sops.
 Out-of-box supports for `kube-aws`, `helm` and `kubectl`.
 Use this as a golang library to easily add supports for the commands of your choice.
 
+## Install
+
+Grab the latest binary from [the GitHub releases page](https://github.com/mumoshu/sops-vault/releases).
+
 ## Pre-requisite
 
 Create a `.sops.yaml` to tell `sops` which key to be used for (re)encrypting files:
