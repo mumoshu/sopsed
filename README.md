@@ -31,3 +31,7 @@ sops-vault run kubectl ...
 ```
 
 See [the documentation resides in this repository](https://github.com/mumoshu/sops-vault/blob/master/docs/sops-vault.md) for more detailed usage of each command.
+
+## Inspirations
+
+- [miquella/vaulted](https://github.com/miquella/vaulted): vaulted uses a password from human-input to protect your vault, whereas sopsed utilizes KMS/GPG via sops instead.
