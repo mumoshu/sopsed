@@ -1,4 +1,4 @@
-## sops-vault
+## sopsed
 
 A convenient wrapper command for automatically encrypting/decrypting files with sops.
 
