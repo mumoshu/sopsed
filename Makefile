@@ -8,11 +8,11 @@ format:
 
 .PHONY: build
 build: format
-	go build -o bin/sops-vault ./examples/kube-aws
+	go build -o bin/sopsed ./examples/kube-aws
 
 .PHONY: it
 it: build
-	sh -c './bin/sops-vault kubectl version'
+	sh -c './bin/sopsed kubectl version'
 
 .PHONY: release
 release: build
