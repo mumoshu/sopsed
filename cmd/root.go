@@ -37,6 +37,18 @@ func Init(app *app.App) {
 		c.DisableFlagParsing = true
 		runCmd.AddCommand(c)
 	}
+
+	decryptCmd := &cobra.Command{
+		Use:   "decrypt [vault]",
+		Short: "Decrypt a named vault to produce cleartext files",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			v := args[0]
+			fmt.Printf("decryptiong %s\n", v)
+			app.Decrypt(v)
+		},
+}
+	RootCmd.AddCommand(decryptCmd)
 }
 
 func Execute() {
