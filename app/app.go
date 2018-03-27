@@ -61,3 +61,41 @@ func (a *App) Run(cmd string, args ...string) {
 		a.Context.ExitWithError(err)
 	}
 }
+
+// Decrypt a named vault
+func (a *App) Decrypt(vault string) {
+	var cfg *VaultConfig
+	for _, c := range a.vaultConfigs() {
+		if c.vaultName == vault {
+			cfg = c
+			break
+		}
+	}
+	if cfg == nil {
+		a.Context.ExitWithError(fmt.Errorf("no vault found: %s", vault))
+	}
+	a.info.Printf("using vault: %s\n", cfg.vaultName)
+	job := &Job{VaultConfig: cfg, context: a.Context}
+	if _, err := job.Decrypt(); err != nil {
+		a.Context.ExitWithError(err)
+	}
+}
+
+// Decrypt a named vault
+func (a *App) Encrypt(vault string) {
+	var cfg *VaultConfig
+	for _, c := range a.vaultConfigs() {
+		if c.vaultName == vault {
+			cfg = c
+			break
+		}
+	}
+	if cfg == nil {
+		a.Context.ExitWithError(fmt.Errorf("no vault found: %s", vault))
+	}
+	a.info.Printf("using vault: %s\n", cfg.vaultName)
+	job := &Job{VaultConfig: cfg, context: a.Context}
+	if err := job.Encrypt(); err != nil {
+		a.Context.ExitWithError(err)
+	}
+}

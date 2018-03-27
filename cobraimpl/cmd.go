@@ -1,8 +1,8 @@
 package cobraimpl
 
 import (
-	"github.com/mumoshu/sops-vault/app"
-	"github.com/mumoshu/sops-vault/cmd"
+	"github.com/mumoshu/sopsed/app"
+	"github.com/mumoshu/sopsed/cmd"
 	"github.com/spf13/cobra"
 )
 

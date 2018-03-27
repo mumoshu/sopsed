@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mumoshu/sops-vault/app"
+	"github.com/mumoshu/sopsed/app"
 	"github.com/spf13/cobra"
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "sops-vault",
-	Short: "sops-vault is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run",
-	Long: `sops-vault is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run.
-				  Complete documentation is available at https://github.com/mumoshu/sops-vault`,
+	Use:   "sopsed",
+	Short: "sopsed is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run",
+	Long: `sopsed is a general wrapper for mozilla/sops to transparently encrypt/decrypt files according to the command being run.
+				  Complete documentation is available at https://github.com/mumoshu/sopsed`,
 	Args: cobra.NoArgs,
 }
 
@@ -37,6 +37,31 @@ func Init(app *app.App) {
 		c.DisableFlagParsing = true
 		runCmd.AddCommand(c)
 	}
+
+	decryptCmd := &cobra.Command{
+		Use:   "decrypt [vault]",
+		Short: "Decrypt a named vault to produce cleartext files",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			v := args[0]
+			fmt.Printf("decryptiong %s\n", v)
+			app.Decrypt(v)
+		},
+	}
+	RootCmd.AddCommand(decryptCmd)
+
+	encryptCmd := &cobra.Command{
+		Use:   "encrypt [vault]",
+		Short: "Encrypt a named vault to produce cleartext files",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			v := args[0]
+			fmt.Printf("encrypting %s\n", v)
+			app.Encrypt(v)
+		},
+	}
+	RootCmd.AddCommand(encryptCmd)
+
 }
 
 func Execute() {

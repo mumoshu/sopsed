@@ -8,7 +8,7 @@ Use this as a golang library to easily add supports for the commands of your cho
 
 ## Install
 
-Grab the latest binary from [the GitHub releases page](https://github.com/mumoshu/sops-vault/releases).
+Grab the latest binary from [the GitHub releases page](https://github.com/mumoshu/sopsed/releases).
 
 ## Pre-requisite
 

@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/mumoshu/sops-vault/cobraimpl"
+	"github.com/mumoshu/sopsed/cobraimpl"
 	"github.com/spf13/cobra/doc"
 )
 
