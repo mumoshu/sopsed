@@ -191,10 +191,6 @@ func (app *Job) Decrypt() (func(), error) {
 
 // RunOrPanic runs the app with the provided configuration. On any error it panics
 func (app *Job) RunOrPanic(command string, args ...string) error {
-	if err := app.Encrypt(); err != nil {
-		return err
-	}
-
 	cleanup, err := app.Decrypt()
 	if err != nil {
 		return err
