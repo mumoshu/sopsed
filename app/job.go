@@ -66,7 +66,7 @@ func (a *assets) writeToFile(unencryptedVault string, encryptedVault string) err
 		return err
 	}
 
-	out, err := runAndCaptureStdout(a.context, "sh", "-c", fmt.Sprintf("sops --encrypt %s", unencryptedVault))
+	out, err := runAndCaptureStdout(a.context, "sh", "-c", fmt.Sprintf("sops --encrypt --input-type json %s", unencryptedVault))
 	if err != nil {
 		if strings.Contains(err.Error(), "config file not found and no keys provided through command line options") {
 			a.context.Debug(err.Error())
